@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { margin: 0; }
+
+    #map {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    #map img {
+      width: 100%;
+      display: block;
+    }
+
+    #dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: red;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+  </style>
+</head>
+<body>
+
+<div id="map">
+  <img src="lilo.jpg" id="mapImg">
+  <div id="dot"></div>
+</div>
+
+<script>
+
+// 🎯 mapping (ჯერ დროებითი, მერე შევცვლით affine-ით)
+
+function gpsToXY(lat, lon) {
+
+  const pts = [
+    { lat: 41.69296610309111, lon: 45.01075302134429, x: 40,  y: 588 }, // p1
+    { lat: 41.69473208443149, lon: 45.0127916834419,  x: 532, y: 13  }, // p2
+    { lat: 41.69293445423774, lon: 45.01302055610982, x: 588, y: 598 }  // p4
+  ];
+
+  const A = [
+    [pts[0].lon, pts[0].lat, 1],
+    [pts[1].lon, pts[1].lat, 1],
+    [pts[2].lon, pts[2].lat, 1]
+  ];
+
+  const Bx = [pts[0].x, pts[1].x, pts[2].x];
+  const By = [pts[0].y, pts[1].y, pts[2].y];
+
+  function det(m) {
+    return m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])
+         - m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])
+         + m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+  }
+
+  function replaceCol(m, col, vec) {
+    return m.map((row, i) => row.map((v, j) => j === col ? vec[i] : v));
+  }
+
+  const D = det(A);
+
+  const a = det(replaceCol(A, 0, Bx)) / D;
+  const b = det(replaceCol(A, 1, Bx)) / D;
+  const c = det(replaceCol(A, 2, Bx)) / D;
+
+  const d = det(replaceCol(A, 0, By)) / D;
+  const e = det(replaceCol(A, 1, By)) / D;
+  const f = det(replaceCol(A, 2, By)) / D;
+
+  return {
+    x: a*lon + b*lat + c,
+    y: d*lon + e*lat + f
+  };
+}
+
+// UI
+const dot = document.getElementById("dot");
+const img = document.getElementById("mapImg");
+const map = document.getElementById("map");
+
+// 👇 ეს ჩასვი აქ
+document.body.insertAdjacentHTML(
+  "beforeend",
+  `<div id="debug" style="
+    position:fixed;
+    bottom:10px;
+    left:10px;
+    background:#000;
+    color:#0f0;
+    padding:5px;
+    font-size:12px;
+    z-index:9999;
+  "></div>`
+);
+
+navigator.geolocation.watchPosition((pos) => {
+  const lat = pos.coords.latitude;
+  const lon = pos.coords.longitude;
+
+  // ეკრანზე გაჩვენებს GPS-ს
+  document.getElementById("debug").innerText =
+    `LAT: ${lat}\nLON: ${lon}`;
+
+  const pixel = gpsToXY(lat, lon);
+
+  dot.style.left = pixel.x + "px";
+  dot.style.top  = pixel.y + "px";
+});
+
+</script>
+
+</body>
+</html>
