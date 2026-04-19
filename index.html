@@ -39,45 +39,109 @@
 function gpsToXY(lat, lon) {
 
   const pts = [
-    { lat: 41.69296610309111, lon: 45.01075302134429, x: 58,  y: 559 }, // p1
-    { lat: 41.69473208443149, lon: 45.0127916834419,  x: 463, y: 85  }, // p2
-    { lat: 41.69293445423774, lon: 45.01302055610982, x: 509, y: 569 }  // p4
+    { lat: 41.69296816050202, lon: 45.01076111307317, x: 58,  y: 561 }, // p1
+    { lat: 41.69505199095477, lon: 45.01132406746814, x: 171, y: 3   }, // p2
+    { lat: 41.694823258180094, lon: 45.01420452100431, x: 747, y: 62  }, // p3
+    { lat: 41.69293064770812, lon: 45.01423910621728, x: 754, y: 570 }  // p4
   ];
 
-  const A = [
-    [pts[0].lon, pts[0].lat, 1],
-    [pts[1].lon, pts[1].lat, 1],
-    [pts[2].lon, pts[2].lat, 1]
-  ];
+  function solveHomography(pts) {
+    const A = [];
+    const B = [];
 
-  const Bx = [pts[0].x, pts[1].x, pts[2].x];
-  const By = [pts[0].y, pts[1].y, pts[2].y];
+    pts.forEach(p => {
+      const X = p.lon;
+      const Y = p.lat;
 
-  function det(m) {
-    return m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])
-         - m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])
-         + m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+      A.push([X, Y, 1, 0, 0, 0, -p.x*X, -p.x*Y]);
+      B.push(p.x);
+
+      A.push([0, 0, 0, X, Y, 1, -p.y*X, -p.y*Y]);
+      B.push(p.y);
+    });
+
+    function solve(A, B) {
+      const n = B.length;
+
+      for (let i = 0; i < n; i++) {
+        let maxRow = i;
+        for (let k = i + 1; k < n; k++) {
+          if (Math.abs(A[k][i]) > Math.abs(A[maxRow][i])) {
+            maxRow = k;
+          }
+        }
+
+        [A[i], A[maxRow]] = [A[maxRow], A[i]];
+        [B[i], B[maxRow]] = [B[maxRow], B[i]];
+
+        let pivot = A[i][i];
+        for (let j = i; j < n; j++) A[i][j] /= pivot;
+        B[i] /= pivot;
+
+        for (let k = 0; k < n; k++) {
+          if (k !== i) {
+            let factor = A[k][i];
+            for (let j = i; j < n; j++) {
+              A[k][j] -= factor * A[i][j];
+            }
+            B[k] -= factor * B[i];
+          }
+        }
+      }
+
+      return B;
+    }
+
+    const h = solve(A, B);
+
+    return [
+      [h[0], h[1], h[2]],
+      [h[3], h[4], h[5]],
+      [h[6], h[7], 1]
+    ];
   }
 
-  function replaceCol(m, col, vec) {
-    return m.map((row, i) => row.map((v, j) => j === col ? vec[i] : v));
-  }
+  const H = solveHomography(pts);
 
-  const D = det(A);
+  const X = lon;
+  const Y = lat;
 
-  const a = det(replaceCol(A, 0, Bx)) / D;
-  const b = det(replaceCol(A, 1, Bx)) / D;
-  const c = det(replaceCol(A, 2, Bx)) / D;
-
-  const d = det(replaceCol(A, 0, By)) / D;
-  const e = det(replaceCol(A, 1, By)) / D;
-  const f = det(replaceCol(A, 2, By)) / D;
+  const denom = H[2][0]*X + H[2][1]*Y + H[2][2];
 
   return {
-    x: a*lon + b*lat + c,
-    y: d*lon + e*lat + f
+    x: (H[0][0]*X + H[0][1]*Y + H[0][2]) / denom,
+    y: (H[1][0]*X + H[1][1]*Y + H[1][2]) / denom
   };
 }
+
+const testPoints = [
+  { lat: 41.69296610309111, lon: 45.01075302134429, color: "blue" },   // p1
+  { lat: 41.69473208443149, lon: 45.0127916834419,  color: "green" },  // p2
+  { lat: 41.69406747348808, lon: 45.01376651147195, color: "yellow" }, // p3
+  { lat: 41.69293445423774, lon: 45.01302055610982, color: "purple" }  // p4
+];
+
+function drawTestPoints() {
+  testPoints.forEach((p) => {
+    const pos = gpsToXY(p.lat, p.lon);
+
+    const d = document.createElement("div");
+    d.style.position = "absolute";
+    d.style.width = "10px";
+    d.style.height = "10px";
+    d.style.borderRadius = "50%";
+    d.style.background = p.color;
+    d.style.transform = "translate(-50%, -50%)";
+
+    d.style.left = pos.x + "px";
+    d.style.top  = pos.y + "px";
+
+    document.getElementById("map").appendChild(d);
+  });
+}
+
+// გაუშვი
+drawTestPoints();
 
 // UI
 const dot = document.getElementById("dot");
