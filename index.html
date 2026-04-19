@@ -39,9 +39,9 @@
 function gpsToXY(lat, lon) {
 
   const pts = [
-    { lat: 41.69296610309111, lon: 45.01075302134429, x: 40,  y: 588 }, // p1
-    { lat: 41.69473208443149, lon: 45.0127916834419,  x: 532, y: 13  }, // p2
-    { lat: 41.69293445423774, lon: 45.01302055610982, x: 588, y: 598 }  // p4
+    { lat: 41.69296610309111, lon: 45.01075302134429, x: 58,  y: 559 }, // p1
+    { lat: 41.69473208443149, lon: 45.0127916834419,  x: 463, y: 85  }, // p2
+    { lat: 41.69293445423774, lon: 45.01302055610982, x: 509, y: 569 }  // p4
   ];
 
   const A = [
@@ -83,6 +83,15 @@ function gpsToXY(lat, lon) {
 const dot = document.getElementById("dot");
 const img = document.getElementById("mapImg");
 const map = document.getElementById("map");
+
+map.addEventListener("click", (e) => {
+  const rect = map.getBoundingClientRect();
+
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  console.log("CLICK:", Math.round(x), Math.round(y));
+});
 
 // 👇 ეს ჩასვი აქ
 document.body.insertAdjacentHTML(
